@@ -1,12 +1,13 @@
 -- CreateTable
 CREATE TABLE "User" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "profileImageUrl" TEXT,
     "password" TEXT NOT NULL,
     "refreshToken" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
