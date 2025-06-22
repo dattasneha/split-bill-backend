@@ -1,8 +1,8 @@
-import { asyncHandler } from "../util/asyncHandler";
-import { ApiResponse } from "../util/apiResponse";
+import { asyncHandler } from "../util/asyncHandler.js";
+import { ApiResponse } from "../util/apiResponse.js";
 import os from "os";
-import ApiError from "../util/ApiError";
-import { STATUS } from "../constants/statusCodes"
+import ApiError from "../util/apiError.js";
+import { STATUS } from "../constants/statusCodes.js"
 
 const serverHealthCheck = asyncHandler(async (req, res) => {
     let systemInfo;
