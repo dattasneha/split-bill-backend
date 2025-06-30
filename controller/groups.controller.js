@@ -88,6 +88,53 @@ const invite = asyncHandler(async (req, res) => {
 
 });
 
-const joinGroup = asyncHandler()
+const joinGroup = asyncHandler(async (req, res) => {
+    const { groupId } = req.body;
 
-export { createGroup, invite }
+    const userInvited = await prisma.groupMembers.findFirst({
+        where: {
+
+            groupId: groupId,
+            userId: req.user.id
+
+        }
+    });
+
+    if (!userInvited) {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.UNAUTHORIZED,
+            "User is not authenticate to join the group."
+        );
+    }
+
+    if (userInvited.status == "Accepted") {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.NOT_ACCEPTABLE,
+            "User is already in the group."
+        );
+    }
+
+    const groupMembers = await prisma.groupMembers.update({
+        where: {
+            groupId_userId: {
+                groupId: groupId,
+                userId: req.user.id
+            }
+        },
+        data: {
+            status: "Accepted"
+        }
+    });
+
+    return res
+        .status(STATUS.SUCCESS.OK)
+        .json(
+            new ApiResponse(
+                groupMembers,
+                "User successfuly joined the group."
+            )
+        );
+
+});
+
+export { createGroup, invite, joinGroup }
