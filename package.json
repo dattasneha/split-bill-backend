@@ -1,5 +1,5 @@
 {
-  "name": "edunest-backend",
+  "name": "split-bill-backend",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
@@ -21,7 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
+    "nodemailer": "^7.0.3",
     "nodemon": "^3.1.10",
+    "otplib": "^12.0.1",
     "prisma": "^6.9.0",
     "zod": "^3.25.64"
   },

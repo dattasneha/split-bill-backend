@@ -9,6 +9,9 @@ import { loginSchema } from "../models/auth/login.schema.js";
 import { generateAccessToken, generateRefreshToken } from "../util/tokenGenerator.js";
 import { cookieOptions } from "../constants/cookieOptions.js";
 import jwt from "jsonwebtoken";
+import { forgetPasswordSchema } from "../models/auth/forgetPassword.schema.js";
+import { sendMail } from "../util/nodemailer.js";
+import { totp } from "otplib";
 /**
  * Handles user login by verifying credentials, generating authentication tokens,
  * and storing the refresh token in the database.
@@ -208,5 +211,52 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         );
 });
 
-export { login, register, logout, refreshAccessToken };
+const forgetPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(STATUS.CLIENT_ERROR.BAD_REQUEST, "Email is required");
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.UNAUTHORIZED,
+            "User with this email does not exist"
+        );
+    }
+
+    // Generate OTP
+    totp.options = { digits: 4 };
+    const token = totp.generate(process.env.OTP_SECRET);
+
+    const otpHash = await bcrypt.hash(token, 10);
+
+    try {
+        // Update user with hashed OTP
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { otp: otpHash }
+        });
+
+        const mailResponse = await sendMail(email, token);
+        const { password: _unused, otp: _onetime, ...sanitizedUser } = user;
+
+        return res.status(STATUS.SUCCESS.OK).json(
+            new ApiResponse(
+                { mailResponse, sanitizedUser },
+                "OTP sent successfully"
+            )
+        );
+    } catch (error) {
+        throw new ApiError(
+            STATUS.SERVER_ERROR.SERVICE_UNAVAILABLE,
+            error.message
+        );
+    }
+});
+
+
+export { login, register, logout, refreshAccessToken, forgetPassword };
 
