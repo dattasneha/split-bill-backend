@@ -114,5 +114,31 @@ const expenseStatus = asyncHandler(async (req, res) => {
 
 });
 
+const expenseApproval = asyncHandler(async (req, res) => {
+    const { expenseId } = req.params;
 
-export { addExpense, getAllExpenses, expenseStatus }
+    const isRejected = await prisma.expenseApproval.findFirst({
+        where: {
+            expenseId: expenseId,
+            status: "Rejected"
+        }
+    });
+
+    const status = isRejected ? "Rejected" : "Approved";
+
+    const expense = await prisma.expenses.update({
+        where: { id: expenseId },
+        data: { status: status }
+    });
+
+    return res
+        .status(STATUS.SUCCESS.OK)
+        .json(
+            new ApiResponse(
+                expense
+            )
+        );
+
+});
+
+export { addExpense, getAllExpenses, expenseStatus, expenseApproval }
