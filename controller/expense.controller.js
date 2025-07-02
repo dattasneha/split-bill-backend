@@ -91,7 +91,7 @@ const expenseStatus = asyncHandler(async (req, res) => {
         );
     }
 
-    await prisma.expenseApproval.update({
+    const expenseApproval = await prisma.expenseApproval.update({
         where: {
             expenseId_userId: {
                 expenseId: expenseId,
@@ -103,24 +103,16 @@ const expenseStatus = asyncHandler(async (req, res) => {
         }
     });
 
-    const expense = await prisma.expenses.update({
-        where: {
-            id: expenseId
-        },
-        data: {
-            status: status
-        }
-    });
-
     return res
         .status(STATUS.SUCCESS.OK)
         .json(
             new ApiResponse(
-                expense,
+                expenseApproval,
                 "Expence status updated successfully."
             )
         );
 
 });
+
 
 export { addExpense, getAllExpenses, expenseStatus }
