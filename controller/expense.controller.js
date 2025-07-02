@@ -80,4 +80,47 @@ const getAllExpenses = asyncHandler(async (req, res) => {
         ));
 });
 
-export { addExpense, getAllExpenses }
+const expenseStatus = asyncHandler(async (req, res) => {
+    const { expenseId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.NOT_ACCEPTABLE,
+            "status for the expense is required."
+        );
+    }
+
+    await prisma.expenseApproval.update({
+        where: {
+            expenseId_userId: {
+                expenseId: expenseId,
+                userId: req.user.id
+            }
+        },
+        data: {
+            status: status
+        }
+    });
+
+    const expense = await prisma.expenses.update({
+        where: {
+            id: expenseId
+        },
+        data: {
+            status: status
+        }
+    });
+
+    return res
+        .status(STATUS.SUCCESS.OK)
+        .json(
+            new ApiResponse(
+                expense,
+                "Expence status updated successfully."
+            )
+        );
+
+});
+
+export { addExpense, getAllExpenses, expenseStatus }
