@@ -64,4 +64,20 @@ const addExpense = asyncHandler(async (req, res) => {
         ));
 });
 
-export { addExpense }
+const getAllExpenses = asyncHandler(async (req, res) => {
+    const { groupId } = req.params;
+
+    const expenses = await prisma.expenses.findMany({
+        where: {
+            groupId: groupId
+        }
+    });
+
+    return res
+        .status(STATUS.SUCCESS.OK)
+        .json(new ApiResponse(
+            expenses
+        ));
+});
+
+export { addExpense, getAllExpenses }
