@@ -40,74 +40,68 @@ const createGroup = asyncHandler(async (req, res) => {
         );
 });
 
+// [POST] /group/:groupId/invite
+// Body: { userId, email }
 const invite = asyncHandler(async (req, res) => {
-    const { userId, groupId, email } = req.body;
+    const { userId, email } = req.body;
+    const { groupId } = req.params;
 
     const userExists = await prisma.user.findUnique({ where: { email } });
 
     if (!userExists) {
         throw new ApiError(
-            STATUS.CLIENT_ERROR.UNAUTHORIZED,
-            "User with this email does not exists."
+            STATUS.CLIENT_ERROR.NOT_FOUND,
+            "User with this email does not exist."
         );
     }
 
-    const reqUserId = req.user.id;
-    const owner = await prisma.group.findFirst(
-        {
-            where: {
-                id: groupId,
-                created_by: reqUserId
-            }
+    const owner = await prisma.group.findFirst({
+        where: {
+            id: groupId,
+            created_by: req.user.id
         }
-    );
+    });
 
     if (!owner) {
         throw new ApiError(
             STATUS.CLIENT_ERROR.UNAUTHORIZED,
-            "Only owner of this group can send invitation."
+            "Only the group owner can send invitations."
         );
     }
 
     const groupMembers = await prisma.groupMembers.create({
         data: {
-            groupId: groupId,
-            userId: userId,
+            groupId,
+            userId,
             status: "Pending"
         }
     });
 
-    return res
-        .status(STATUS.SUCCESS.OK)
-        .json(
-            new ApiResponse(
-                groupMembers,
-                "Invitation sent."
-            )
-        );
-
+    return res.status(STATUS.SUCCESS.CREATED).json(
+        new ApiResponse(groupMembers, "Invitation sent.")
+    );
 });
 
+
+// [PUT] /group/:groupId/join
 const joinGroup = asyncHandler(async (req, res) => {
-    const { groupId } = req.body;
+    const { groupId } = req.params;
 
     const userInvited = await prisma.groupMembers.findFirst({
         where: {
-
-            groupId: groupId,
+            groupId,
             userId: req.user.id
-
         }
     });
 
     if (!userInvited) {
         throw new ApiError(
             STATUS.CLIENT_ERROR.UNAUTHORIZED,
-            "User is not authenticate to join the group."
+            "User is not authorized to join the group."
         );
     }
 
-    if (userInvited.status == "Accepted") {
+    if (userInvited.status === "Accepted") {
         throw new ApiError(
             STATUS.CLIENT_ERROR.NOT_ACCEPTABLE,
             "User is already in the group."
@@ -117,7 +111,7 @@ const joinGroup = asyncHandler(async (req, res) => {
     const groupMembers = await prisma.groupMembers.update({
         where: {
             groupId_userId: {
-                groupId: groupId,
+                groupId,
                 userId: req.user.id
             }
         },
@@ -126,15 +120,88 @@ const joinGroup = asyncHandler(async (req, res) => {
         }
     });
 
-    return res
-        .status(STATUS.SUCCESS.OK)
-        .json(
-            new ApiResponse(
-                groupMembers,
-                "User successfuly joined the group."
-            )
-        );
-
+    return res.status(STATUS.SUCCESS.OK).json(
+        new ApiResponse(groupMembers, "User successfully joined the group.")
+    );
 });
 
-export { createGroup, invite, joinGroup }
+// [DELETE] /group/:groupId/reject
+const reject = asyncHandler(async (req, res) => {
+    const { groupId } = req.params;
+
+    await prisma.groupMembers.delete({
+        where: {
+            groupId_userId: {
+                groupId,
+                userId: req.user.id
+            }
+        }
+    });
+
+    return res.status(STATUS.SUCCESS.OK).json(
+        new ApiResponse(null, "User invitation rejected successfully.")
+    );
+});
+
+
+// [DELETE] /group/:groupId/member/:userId
+const removeMember = asyncHandler(async (req, res) => {
+    const { groupId, userId } = req.params;
+
+    const isOwner = await prisma.group.findFirst({
+        where: {
+            id: groupId,
+            created_by: req.user.id
+        }
+    });
+
+    if (!isOwner) {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.UNAUTHORIZED,
+            "Only the group owner can remove a member."
+        );
+    }
+
+    await prisma.groupMembers.delete({
+        where: {
+            groupId_userId: {
+                groupId,
+                userId
+            }
+        }
+    });
+
+    return res.status(STATUS.SUCCESS.OK).json(
+        new ApiResponse(null, "User successfully removed from the group.")
+    );
+});
+
+
+// [DELETE] /group/:groupId
+const deleteGroup = asyncHandler(async (req, res) => {
+    const { groupId } = req.params;
+
+    const isOwner = await prisma.group.findFirst({
+        where: {
+            id: groupId,
+            created_by: req.user.id
+        }
+    });
+
+    if (!isOwner) {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.UNAUTHORIZED,
+            "Only the group owner can delete the group."
+        );
+    }
+
+    await prisma.groupMembers.deleteMany({ where: { groupId } });
+    await prisma.group.delete({ where: { id: groupId } });
+
+    return res.status(STATUS.SUCCESS.OK).json(
+        new ApiResponse(null, "Group deleted successfully.")
+    );
+});
+
+
+export { createGroup, invite, joinGroup, reject, removeMember, deleteGroup }
