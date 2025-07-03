@@ -20,6 +20,10 @@ model User {
     expenses        Expenses[]
     expenseApproval ExpenseApproval[]
     expenseSplit    ExpenseSplit[]
+    usergets        UserBalance[]     @relation("gets")
+    userOwes        UserBalance[]     @relation("owes")
+    paymentFrom     Payment[]         @relation("from")
+    paymentTo       Payment[]         @relation("to")
     createdAt       DateTime          @default(now())
     updatedAt       DateTime          @updatedAt
 }
@@ -32,6 +36,7 @@ model Group {
     group_members GroupMembers[]
     expenses      Expenses[]
     createdAt     DateTime       @default(now())
+    Payment       Payment[]
 }
 
 model GroupMembers {
@@ -56,6 +61,7 @@ model Expenses {
     status          String
     expenseApproval ExpenseApproval[]
     expenseSplit    ExpenseSplit[]
+    userBalance     UserBalance[]
     created_at      DateTime          @default(now())
 }
 
@@ -77,4 +83,30 @@ model ExpenseSplit {
     amout_share Float
 
     @@id([expenseId, userId])
+}
+
+model UserBalance {
+    expense      Expenses @relation(fields: [expenseId], references: [id])
+    expenseId    String
+    userGets     User     @relation("gets", fields: [user_gets_id], references: [id])
+    user_gets_id String
+    userOwes     User     @relation("owes", fields: [user_owes_id], references: [id])
+    user_owes_id String
+    amout_share  Float
+
+    @@id([expenseId, user_gets_id, user_owes_id])
+}
+
+model Payment {
+    id             String   @id @default(uuid())
+    fromUser       User     @relation("from", fields: [from_user_id], references: [id])
+    from_user_id   String
+    toUser         User     @relation("to", fields: [to_user_id], references: [id])
+    to_user_id     String
+    group          Group    @relation(fields: [groupId], references: [id])
+    groupId        String
+    amout_transfer Float
+    status         String
+    txn_id         String
+    created_at     DateTime @default(now())
 }

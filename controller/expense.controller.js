@@ -5,9 +5,14 @@ import { STATUS } from "../constants/statusCodes.js";
 import { prisma } from "../util/prismaClient.js";
 
 const addExpense = asyncHandler(async (req, res) => {
-    const { title, amount } = req.body;
-    const { groupId } = req.params;
+    const { groupId, title, amount, splits } = req.body;
 
+    if (!Array.isArray(splits)) {
+        throw new ApiError(
+            STATUS.CLIENT_ERROR.NOT_ACCEPTABLE,
+            "'splits' must be an array."
+        );
+    }
     if (!amount) {
         throw new ApiError(
             STATUS.CLIENT_ERROR.NOT_ACCEPTABLE,
@@ -52,20 +57,63 @@ const addExpense = asyncHandler(async (req, res) => {
         data: {
             expenseId: expense.id,
             userId: req.user.id,
-            status: "Pending"
+            status: "Approved"
         }
+    });
+
+    for (const split of splits) {
+        const { userId, split_amount } = split
+
+        await prisma.expenseSplit.create({
+            data: {
+                expenseId: expense.id,
+                userId: userId,
+                amout_share: split_amount
+            }
+        });
+
+        await prisma.userBalance.create({
+            data: {
+                expenseId: expense.id,
+                user_gets_id: req.user.id,
+                user_owes_id: userId,
+                amout_share: split_amount
+            }
+        });
+    }
+
+    const totalSplit = await prisma.expenseSplit.aggregate({
+        where: { expenseId: expense.id },
+        _sum: {
+            amout_share: true
+        }
+    });
+
+    const remainingExpense = expense.amount - (totalSplit._sum.amout_share || 0);
+
+    await prisma.expenseSplit.create({
+        data: {
+            expenseId: expense.id,
+            userId: req.user.id,
+            amout_share: remainingExpense
+        }
+    });
+
+    const splitAmount = await prisma.expenseSplit.findMany({
+        where: { expenseId: expense.id }
     });
 
     return res
         .status(STATUS.SUCCESS.CREATED)
         .json(new ApiResponse(
-            expense,
+            splitAmount,
             "Expense added successfully."
         ));
 });
 
+
 const getAllExpenses = asyncHandler(async (req, res) => {
-    const { groupId } = req.params;
+    const { groupId } = req.body;
 
     const expenses = await prisma.expenses.findMany({
         where: {

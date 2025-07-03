@@ -4,8 +4,8 @@ import { addExpense, expenseApproval, expenseStatus, getAllExpenses } from "../c
 
 const router = Router();
 
-router.route("/:groupId/create").post(verifyUserJwt, addExpense);
-router.route("/:groupId/expenses").get(verifyUserJwt, getAllExpenses);
+router.route("/create").post(verifyUserJwt, addExpense);
+router.route("/expenses").get(verifyUserJwt, getAllExpenses);
 router.route("/:expenseId/status").post(verifyUserJwt, expenseStatus);
 router.route("/:expenseId/approve").get(verifyUserJwt, expenseApproval);
 export default router;
