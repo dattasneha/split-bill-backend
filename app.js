@@ -11,7 +11,7 @@ app.use(
         credentials: true
     })
 );
-
-app.use("/api/v1", routes);
 app.use(cookieParser());
+app.use("/api/v1", routes);
+
 export { app };
